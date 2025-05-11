@@ -1,0 +1,5 @@
+调试json_to_verilog.cpp
+在PS命令行出现后输入    g++ -o json_to_verilog json_to_verilog.cpp -lstdc++fs
+在下一行PS出现后输入    ./json_to_verilog 0.json 0.v
+0.json对应的verilog文件存储在0.v中
+、、、蕴含符号->用逻辑等价形式 (!a || b) 表示
