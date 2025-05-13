@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <nlohmann/json.hpp>
+#include "./third_parties/nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
@@ -11,8 +11,9 @@ std::string generate_variable_declarations(const json& variable_list) {
     for (const auto& var : variable_list) {
         std::string name = var["name"];
         int bit_width = var["bit_width"];
-        verilog_code += "    rand bit [" + std::to_string(bit_width - 1) + ":0] " + name + ";\n";
+        verilog_code += "    input wire [" + std::to_string(bit_width - 1) + ":0] " + name + ",\n";
     }
+    verilog_code += "    output wire result\n";
     return verilog_code;
 }
 
@@ -101,11 +102,20 @@ std::string generate_expression(const json& expr, const json& variable_list) {
 
 // 生成Verilog约束
 std::string generate_constraints(const json& constraint_list, const json& variable_list) {
-    std::string verilog_code = "    constraint cb {\n";
+    std::string verilog_code;
+    int constraint_count = 0;
     for (const auto& constraint : constraint_list) {
-        verilog_code += "        " + generate_expression(constraint, variable_list) + ";\n";
+        verilog_code += "    assign cnstr" + std::to_string(constraint_count) + " = " + generate_expression(constraint, variable_list) + ";\n";
+        verilog_code += "    assign cnstr" + std::to_string(constraint_count) + "_redOR = " + "|cnstr" + std::to_string(constraint_count) + ";\n";
+        constraint_count++;
     }
-    verilog_code += "    }\n";
+    verilog_code += "    assign result = ";
+    for (int i = 0; i < constraint_count; i++) {
+        verilog_code += "cnstr" + std::to_string(i) + "_redOR";
+        if (i != constraint_count - 1)
+            verilog_code += " & ";
+    }
+    verilog_code += ";\n";
     return verilog_code;
 }
 
@@ -134,8 +144,9 @@ int main(int argc, char* argv[]) {
     }
 
     // 生成Verilog代码
-    std::string verilog_code = "module test;\n";
+    std::string verilog_code = "module test(\n";
     verilog_code += generate_variable_declarations(data["variable_list"]);
+    verilog_code += ");\n\n";
     verilog_code += generate_constraints(data["constraint_list"], data["variable_list"]);
     verilog_code += "endmodule\n";
 
