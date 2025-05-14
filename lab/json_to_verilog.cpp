@@ -103,19 +103,16 @@ std::string generate_expression(const json& expr, const json& variable_list) {
 // 生成Verilog约束
 std::string generate_constraints(const json& constraint_list, const json& variable_list) {
     std::string verilog_code;
+    std::string result;
     int constraint_count = 0;
     for (const auto& constraint : constraint_list) {
         verilog_code += "    assign cnstr" + std::to_string(constraint_count) + " = " + generate_expression(constraint, variable_list) + ";\n";
         verilog_code += "    assign cnstr" + std::to_string(constraint_count) + "_redOR = " + "|cnstr" + std::to_string(constraint_count) + ";\n";
+        result += "cnstr" + std::to_string(constraint_count) + "_redOR & ";
         constraint_count++;
     }
-    verilog_code += "    assign result = ";
-    for (int i = 0; i < constraint_count; i++) {
-        verilog_code += "cnstr" + std::to_string(i) + "_redOR";
-        if (i != constraint_count - 1)
-            verilog_code += " & ";
-    }
-    verilog_code += ";\n";
+    result.erase(result.length()-3);
+    verilog_code += "    assign result = " + result + ";\n";
     return verilog_code;
 }
 
