@@ -106,7 +106,9 @@ std::string generate_constraints(const json& constraint_list, const json& variab
     std::string result;
     int constraint_count = 0;
     for (const auto& constraint : constraint_list) {
+        verilog_code += "    wire cnstr" + std::to_string(constraint_count) + ";\n";
         verilog_code += "    assign cnstr" + std::to_string(constraint_count) + " = " + generate_expression(constraint, variable_list) + ";\n";
+        verilog_code += "    wire cnstr" + std::to_string(constraint_count) + "_redOR;\n";
         verilog_code += "    assign cnstr" + std::to_string(constraint_count) + "_redOR = " + "|cnstr" + std::to_string(constraint_count) + ";\n";
         result += "cnstr" + std::to_string(constraint_count) + "_redOR & ";
         constraint_count++;
