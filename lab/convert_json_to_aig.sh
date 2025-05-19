@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 赋予执行权限： chmod +x convert_json_to_aig.sh
+# 运行脚本： ./convert_json_to_aig.sh
+
 # 参数定义（可修改为实际路径，此处以opt1为例）
 addr1="/root/workspace/sv-sampler-lab/opt1"      # 输入JSON文件目录
 addr2="/root/workspace/sv-sampler-lab/opt1"  # 输出Verilog文件目录
