@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # 赋予执行权限： chmod +x convert_json_to_aig.sh
 # 运行脚本： ./convert_json_to_aig.sh
 
@@ -9,9 +8,17 @@ addr2="/root/workspace/sv-sampler-lab/opt1"  # 输出Verilog文件目录
 addr3="/root/workspace/sv-sampler-lab/opt1"      # 输出AIG文件目录
 json_to_verilog_cpp="json_to_verilog.cpp"  # C++转换程序路径
 
+JSON_DIR="${HOME}/workspace/sv-sampler-lab/json"
+STD="c++17"
+CXX="g++"
+
 # 编译 json_to_verilog.cpp
 echo "Step 1: Compiling json_to_verilog.cpp..."
-g++ -o json_to_verilog "$json_to_verilog_cpp" -lstdc++fs
+cd /root/workspace/sv-sampler-lab
+"${CXX}" -std=${STD} \
+    -I "${JSON_DIR}/single_include/nlohmann" \
+    -o json_to_verilog "${json_to_verilog_cpp}" \
+    -lstdc++fs
 if [ $? -ne 0 ]; then
     echo "Error: Failed to compile json_to_verilog.cpp"
     exit 1
@@ -31,7 +38,7 @@ for json_file in "$addr1"/*.json; do
     read_verilog $addr2/$base.v
     synth
     aigmap
-    write_aiger $addr3/$base.aig
+    write_aiger -ascii $addr3/$base.aig
 EOF
 done
 
