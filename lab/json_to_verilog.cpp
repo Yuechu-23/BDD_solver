@@ -1,11 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "json.hpp"
+#include "./third_parties/nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
-std::string generate_variable_declarations(const json& expr, const json& variable_list) {
+std::string generate_variable_declarations(const json& expr, const json& variable_list,std::vector<std::string>& divisors) {
     std::string op = expr["op"];
     
     // 基本变量常量
@@ -18,52 +18,53 @@ std::string generate_variable_declarations(const json& expr, const json& variabl
     
     // 单目运算符
     else if (op == "LOG_NEG") {
-        return "(!(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + "))";
+        return "(!(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + "))";
     } else if (op == "BIT_NEG") {
-        return "(~(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + "))";
+        return "(~(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + "))";
     } else if (op == "MINUS") {
-        return "(-" + generate_variable_declarations(expr["lhs_expression"], variable_list) + ")";
+        return "(-" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + ")";
     }
     
     // 双目运算符
     else if (op == "ADD") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " + " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " + " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "SUB") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " - " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " - " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "MUL") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " * " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " * " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "DIV") {
-        std::string divisor = generate_variable_declarations(expr["rhs_expression"], variable_list);
-        return "(" + divisor + " == 0 ? 0 : " + generate_variable_declarations(expr["lhs_expression"], variable_list) + " / " + divisor + ")";
+        std::string divisor = generate_variable_declarations(expr["rhs_expression"], variable_list, divisors);
+        divisors.push_back(divisor);
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " / " + divisor + ")";
     } else if (op == "LOG_AND") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " && " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " && " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "LOG_OR") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " || " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " || " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "EQ") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " == " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " == " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "NEQ") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " != " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " != " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "LT") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " < " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " < " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "LTE") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " <= " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " <= " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "GT") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " > " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " > " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "GTE") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " >= " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " >= " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "BIT_AND") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " & " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " & " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "BIT_OR") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " | " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " | " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "BIT_XOR") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " ^ " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " ^ " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "RSHIFT") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " >> " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " >> " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "LSHIFT") {
-        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list) + " << " + generate_variable_declarations(expr["rhs_expression"], variable_list) + ")";
+        return "(" + generate_variable_declarations(expr["lhs_expression"], variable_list, divisors) + " << " + generate_variable_declarations(expr["rhs_expression"], variable_list, divisors) + ")";
     } else if (op == "IMPLY") {
-        std::string lhs = generate_variable_declarations(expr["lhs_expression"], variable_list);
-        std::string rhs = generate_variable_declarations(expr["rhs_expression"], variable_list);
+        std::string lhs = generate_variable_declarations(expr["lhs_expression"], variable_list, divisors);
+        std::string rhs = generate_variable_declarations(expr["rhs_expression"], variable_list, divisors);
         return "(!(" + lhs + " != 0) || (" + rhs + " != 0))";
     }
 
@@ -140,10 +141,21 @@ int main(int argc, char* argv[]) {
     outputFile << "    output wire result;" << std::endl;
     outputFile << std::endl;
 
+    std::vector<std::string> divisors;
+
     // 生成约束
     for (size_t i = 0; i < constraintList.size(); ++i) {
-        std::string expr = generate_variable_declarations(constraintList[i], variable_list);
+        std::string expr = generate_variable_declarations(constraintList[i], variable_list, divisors);
         outputFile << "    assign cnstr_" << i << " = |(" << expr << ");" << std::endl;
+    }
+
+    outputFile << "    wire constraint_" << constraintList.size();
+    for (size_t i = constraintList.size() + 1; i < constraintList.size() + divisors.size(); ++i) {
+        outputFile << ", constraint_" << i;
+    }
+    outputFile << ";" << std::endl;
+    for (size_t i = 0; i < divisors.size(); ++i) {
+        outputFile << "    assign constraint_" << constraintList.size() + i << " = |(" << divisors[i] << ");" << std::endl;
     }
     
     // 生成总体约束（所有单个约束的 AND）
