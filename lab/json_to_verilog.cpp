@@ -108,8 +108,8 @@ std::string generate_constraints(const json& constraint_list, const json& variab
         constraint_count++;
     }
     for(const auto& expr: divide_exprs) {
-        verilog_code += "   wire cnstrDIV" + std::to_string(constraint_count) + ";\n";
-        verilog_code += "   assign cnstrDIV" + std::to_string(constraint_count) + " = |(" + expr + ");\n";
+        verilog_code += "    wire cnstrDIV" + std::to_string(constraint_count) + ";\n";
+        verilog_code += "    assign cnstrDIV" + std::to_string(constraint_count) + " = |(" + expr + ");\n";
         result += "cnstrDIV" + std::to_string(constraint_count) + " & ";
         constraint_count++;
     }
