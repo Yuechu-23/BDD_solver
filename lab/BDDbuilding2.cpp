@@ -2,7 +2,86 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <unordered_set>
+#include <unordered_map>
+#include <algorithm>
 #include "cuddObj.hh"
+#include "cuddInt.h"
+
+std::unordered_map<DdNode*, __float128> node_odd_cnt;
+std::unordered_map<DdNode*, __float128> node_even_cnt;
+
+std::pair<__float128,__float128> countPaths(DdManager* mgr, DdNode* n){
+    auto it = node_even_cnt.find(n);
+    if(it != node_even_cnt.end()){
+        return std::make_pair(node_odd_cnt[n], node_even_cnt[n]);
+    }
+    if(Cudd_IsConstant(n)){
+        return Cudd_IsComplement(n) ?
+            std::pair<__float128,__float128>{0, 0} :
+            std::pair<__float128,__float128>{0, 1};
+    }
+
+    DdNode* real = Cudd_Regular(n);
+    bool is_complement = Cudd_IsComplement(n);
+    DdNode* t = Cudd_T(real);
+    DdNode* e = Cudd_E(real);
+    if(is_complement){
+        t = Cudd_Not(t);
+        e = Cudd_Not(e);
+    }
+    auto [odd_t, even_t] = countPaths(mgr, t);
+    auto [odd_e, even_e] = countPaths(mgr, e);
+    __float128 odd = 0, even = 0;
+
+    if(Cudd_IsComplement(t)){
+        odd += even_t;
+        even += odd_t;
+    } else {
+        odd += odd_t;
+        even += even_t;
+    }
+    if(Cudd_IsComplement(e)){
+        odd += even_e;
+        even += odd_e;
+    } else {
+        odd += odd_e;
+        even += even_e;
+    }
+
+    node_odd_cnt[n] = odd;
+    node_even_cnt[n] = even;
+    return std::make_pair(odd, even);
+}
+
+void DFS(DdNode* x,bool odd,std::vector<int>& path){
+    
+    if(Cudd_IsConstant(x))
+        return;
+    
+    DdNode* real = Cudd_Regular(x);
+    int var_idx = Cudd_NodeReadIndex(real);
+    bool is_complement = Cudd_IsComplement(x);
+    DdNode* t = Cudd_T(real);
+    DdNode* e = Cudd_E(real);
+    if(is_complement){
+        t = Cudd_Not(t);
+        e = Cudd_Not(e);
+    }
+
+    bool odd_left = odd ^ Cudd_IsComplement(t);
+    bool odd_right = odd ^ Cudd_IsComplement(e);
+    __float128 cnt_left = odd_left ? node_odd_cnt[t] : node_even_cnt[t];
+    __float128 cnt_right = odd_right ? node_odd_cnt[e] : node_even_cnt[e];
+    double prob_left = (double)(cnt_left / (cnt_left + cnt_right));
+    if((double)rand() / RAND_MAX < prob_left){
+        path.push_back(var_idx);
+        DFS(t, odd_left, path);
+    } else {
+        path.push_back(-var_idx);
+        DFS(e, odd_right, path);
+    }
+}
 
 int main(int argc, char* argv[]) {
 
@@ -32,7 +111,7 @@ int main(int argc, char* argv[]) {
     int output;
     fin >> output;
 
-    Cudd_AutodynEnable(mgr, CUDD_REORDER_SIFT);
+    Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
 
     for(int i = 0;i < A; ++i){
         int lhs, rhs0, rhs1;
@@ -60,10 +139,18 @@ int main(int argc, char* argv[]) {
     Cudd_AutodynDisable(mgr);
     Cudd_ReduceHeap(mgr, CUDD_REORDER_SIFT, 0);
 
-    // 打印输出BDD信息
-    std::cout << "Output BDD for variable " << output << ":" << Cudd_DagSize(output_bdd) << std::endl;
+    countPaths(mgr, output_bdd);
+    std::vector<int> path;
+    DFS(output_bdd, Cudd_IsComplement(output_bdd), path);
 
-    // 减少引用计数
+    sort(path.begin(), path.end(), [](int a, int b) {
+        return abs(a) < abs(b);
+    });
+    for(int var: path){
+        bool val = var > 0;
+        std::cout << "x" << var << " = " << (val ? "1" : "0") << "\n";
+    }
+    
     for(auto& bdd_var : bdd_vars) {
         if (bdd_var != nullptr) {
             Cudd_RecursiveDeref(mgr, bdd_var);
