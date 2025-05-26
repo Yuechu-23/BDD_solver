@@ -58,6 +58,7 @@ void DFS(DdNode* x,int odd,std::vector<int>& path){
         assert(!odd);
         return;
     }
+
     DdNode* real = Cudd_Regular(x);
     int var_idx = Cudd_NodeReadIndex(real);
     DdNode* t = Cudd_T(real);
@@ -72,24 +73,24 @@ void DFS(DdNode* x,int odd,std::vector<int>& path){
         prob_left = static_cast<double>(cnt_left) / (cnt_left + cnt_right);
     
     if(dis(gen) < prob_left){
-        path.push_back(var_idx);
+        path[var_idx] = 1;
         DFS(t, odd_left, path);
     } else {
-        path.push_back(-var_idx);
+        path[var_idx] = 0;
         DFS(e, odd_right, path);
     }
 }
 
 int main(int argc, char* argv[]) {
 
+    //input
     std::string aig_filename = argv[1];
     int num_samples = std::stoi(argv[2]);
     unsigned seed = std::stoul(argv[3]);
     std::string bitwidth_filename = argv[4];
     std::string output_filename = argv[5];
-
-    gen.seed(seed);
     
+    //aig input
     std::ifstream aig_fin(aig_filename);
     if (!aig_fin) {
         std::cerr<<"Cannot open "<<aig_filename<<"\n";
@@ -103,6 +104,7 @@ int main(int argc, char* argv[]) {
 
     DdManager* mgr = Cudd_Init(0, 0, CUDD_UNIQUE_SLOTS, CUDD_CACHE_SLOTS, 0);
     std::vector<DdNode*> bdd_vars(M+1,nullptr);
+    //aig input 
     for(int i = 0; i < I; ++i) {
         int input;
         aig_fin >> input;
@@ -115,19 +117,17 @@ int main(int argc, char* argv[]) {
     int output_idx;
     aig_fin >> output_idx;
 
+    //Dynamic variable reordering
     Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
 
+    //aig AND gates
     for(int i = 0;i < A; ++i){
         int lhs, rhs0, rhs1;
         aig_fin >> lhs >> rhs0 >> rhs1;
         int id_lhs = lhs / 2;
-        
-        DdNode* f0 = bdd_vars[rhs0 / 2];
-        if (rhs0 & 1) f0 = Cudd_Not(f0);
-        DdNode* f1 = bdd_vars[rhs1 / 2];
-        if (rhs1 & 1) f1 = Cudd_Not(f1);
-        
-        bdd_vars[id_lhs] = Cudd_bddAnd(mgr, f0, f1);
+        bdd_vars[id_lhs] = Cudd_bddAnd(mgr, 
+            (rhs0 & 1) ? Cudd_Not(bdd_vars[rhs0/2]): bdd_vars[rhs0/2], 
+            (rhs1 & 1) ? Cudd_Not(bdd_vars[rhs1/2]): bdd_vars[rhs1/2]);
         Cudd_Ref(bdd_vars[id_lhs]);
     }
 
@@ -138,8 +138,11 @@ int main(int argc, char* argv[]) {
     Cudd_Ref(output_bdd);
     
     Cudd_AutodynDisable(mgr);
+
+    //Manually reduce the heap
     Cudd_ReduceHeap(mgr, CUDD_REORDER_SIFT, 0);
 
+    //get bit widths from txt
     std::vector<int> bitwidths;
     std::ifstream bitwidth_fin(bitwidth_filename);
     int width;
@@ -151,16 +154,16 @@ int main(int argc, char* argv[]) {
         bitwidths.push_back(width);
     bitwidth_fin.close();
 
+    //Generate random paths
     std::vector<std::vector<std::vector<int>>> results_binary(num_samples, std::vector<std::vector<int>>(bitwidths.size()));
     
     countPaths(mgr, output_bdd);
     for(int i = 0; i < num_samples; i++){
+        gen.seed(seed + i);
         for(int j = 0; j < bitwidths.size(); j++) 
             results_binary[i][j].resize(bitwidths[j], 0);
         std::vector<int> path(I + 1, 0);
         DFS(output_bdd, Cudd_IsComplement(output_bdd), path);
-        for(int var: path)
-            if(var > 0) path[var] = 1;
         int cnt = 1;
         for(int j = 0;j < bitwidths.size(); j++)
             for(int k = 0;k < bitwidths[j];k++)
@@ -173,9 +176,10 @@ int main(int argc, char* argv[]) {
         
     Cudd_Quit(mgr);
 
+    //convert results to hex and write to json
     json output;
     json assignment_list = json::array();
-    for(int i = 0; i <num_samples; i++){
+    for(int i = 0; i < num_samples; i++){
         json sample = json::array();
         for(int j = 0; j < bitwidths.size(); j++){
             std::string hex_value;
@@ -183,34 +187,18 @@ int main(int argc, char* argv[]) {
             int hex_digit = 0;
             int bit_pos = 0;
             for(int k = 0; k < bitwidths[j]; k++){
-                hex_digit = (hex_digit << 1) | results_binary[i][j][k];
+                hex_digit |= (results_binary[i][j][k] << bit_pos);
                 bit_pos++;
                 bits_left--;
-            
-                // 每4位或到达最后一组位时，转换为十六进制
                 if(bit_pos == 4 || bits_left == 0) {
-                // 如果不足4位，左移到最高位
-                    if(bit_pos < 4) {
-                        hex_digit <<= (4 - bit_pos);
-                    }
-                // 转换为十六进制字符
                     char hex_char;
                     if(hex_digit < 10)
                         hex_char = '0' + hex_digit;
                     else
                         hex_char = 'a' + (hex_digit - 10);
-                
-                    hex_value += hex_char;
+                    hex_value = hex_char + hex_value;
                     hex_digit = 0;
                     bit_pos = 0;
-                }
-            }
-            if(hex_value.length() > 1) {
-                size_t first_non_zero = hex_value.find_first_not_of('0');
-                if(first_non_zero != std::string::npos) {
-                    hex_value = hex_value.substr(first_non_zero);
-                } else {
-                    hex_value = "0";  // 全是0的情况
                 }
             }
             json value_obj;
