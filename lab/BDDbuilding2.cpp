@@ -80,6 +80,8 @@ void DFS(DdNode* x,int odd,std::vector<int>& path){
 int main(int argc, char* argv[]) {
 
     std::string filename = argv[1];
+    std::string num_samples_str = argv[2];
+    int num_samples = std::stoi(num_samples_str);
     std::ifstream fin(filename);
     if (!fin) {
         std::cerr<<"Cannot open "<<argv[1]<<"\n";
@@ -129,7 +131,7 @@ int main(int argc, char* argv[]) {
     Cudd_ReduceHeap(mgr, CUDD_REORDER_SIFT, 0);
 
     countPaths(mgr, output_bdd);
-    for(int i=0;i<10;i++){
+    for(int i=0;i<num_samples;i++){
         gen.seed(rd() + i);
         std::vector<int> path;
         DFS(output_bdd, Cudd_IsComplement(output_bdd), path);
