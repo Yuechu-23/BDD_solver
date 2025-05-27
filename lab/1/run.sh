@@ -24,7 +24,7 @@ fi
 
 mkdir -p "$RUN_DIR"
 
-BASE_DIR="/root/workspace/sv-sampler-lab/_run"
+BASE_DIR="/root/workspace/sv-sampler-lab/run_dir"
 JSON_DIR="${BASE_DIR}/json"
 CUDD_DIR="${BASE_DIR}/cudd"
 JSON_TO_VERILOG="${BASE_DIR}/json_to_verilog"
