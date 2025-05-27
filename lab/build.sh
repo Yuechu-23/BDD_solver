@@ -27,7 +27,7 @@ else
 fi
 echo 
 
-mkdir -p _run
+mkdir -p run_dir
 
 echo "==== Step 1: Compile CUDD ===="
 if [ ! -f "./cudd/cudd/.libs/libcudd.a" ] && [ ! -f "./cudd/cudd/.libs/libcudd.so" ]; then
@@ -56,7 +56,7 @@ fi
 # 编译 json_to_verilog
 echo "==== Step 3: Compile json_to_verilog.cpp ===="
 JSONTOVERILOG_SRC="./json_to_verilog.cpp"
-JSONTOVERILOG_EXEC="_run/json_to_verilog"
+JSONTOVERILOG_EXEC="run_dir/json_to_verilog"
 JSONTOVERILOG_FLAGS="-std=c++11 -I./json/include"
 
 echo "Compiling json_to_verilog.cpp..."
@@ -71,7 +71,7 @@ echo -e "\033[32mSuccess! ${JSONTOVERILOG_EXEC}\033[0m"
 # 编译 json_to_bitwidth
 echo "==== Step 4: Compile json_to_bitwidth.cpp ===="
 JSONTOBITWIDTH_SRC="./json_to_bitwidth.cpp"
-JSONTOBITWIDTH_EXEC="_run/json_to_bitwidth"
+JSONTOBITWIDTH_EXEC="run_dir/json_to_bitwidth"
 JSONTOBITWIDTH_FLAGS="-std=c++11 -I./json/include"
 
 echo "Compiling json_to_bitwidth.cpp..."
@@ -104,17 +104,17 @@ if [ ! -f "$CUDD_LIB/libcudd.a" ] && [ ! -f "$CUDD_LIB/libcudd.so" ]; then
 fi
 
 echo "Compiling aig_to_BDD.cpp..."
-g++ ${CXX_FLAGS} ${INCLUDE_FLAGS} "${SRC_DIR}/aig_to_BDD.cpp" -o "_run/${EXEC_NAME}" ${LINK_FLAGS}
+g++ ${CXX_FLAGS} ${INCLUDE_FLAGS} "${SRC_DIR}/aig_to_BDD.cpp" -o "run_dir/${EXEC_NAME}" ${LINK_FLAGS}
 
 if [ $? -ne 0 ]; then
     echo -e "\033[31mFailed: Unable to generate ${EXEC_NAME}\033[0m"
     exit 1
 fi
-echo -e "\033[32mSuccess! _run/${EXEC_NAME}\033[0m"
+echo -e "\033[32mSuccess! run_dir/${EXEC_NAME}\033[0m"
 echo
 echo -e "\033[32m==== All has been compiled ====\033[0m"
-echo "- json_to_verilog.cpp: _run/json_to_verilog"
-echo "- json_to_bitwidth.cpp: _run/json_to_bitwidth"
-echo "- aig_to_BDD.cpp: _run/aig_to_BDD"
+echo "- json_to_verilog.cpp: run_dir/json_to_verilog"
+echo "- json_to_bitwidth.cpp: run_dir/json_to_bitwidth"
+echo "- aig_to_BDD.cpp: run_dir/aig_to_BDD"
 
 exit 0
