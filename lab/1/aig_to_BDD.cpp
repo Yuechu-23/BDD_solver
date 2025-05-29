@@ -84,6 +84,10 @@ void DFS(DdNode* x,int odd,std::vector<int>& path){
 int main(int argc, char* argv[]) {
 
     //input
+    if(argc != 6) {
+        std::cerr << "Usage: " << argv[0] << " <aig_file> <num_samples> <seed> <bitwidth_file> <output_file>\n";
+        return 1;
+    }
     std::string aig_filename = argv[1];
     int num_samples = std::stoi(argv[2]);
     unsigned seed = std::stoul(argv[3]);
@@ -102,9 +106,12 @@ int main(int argc, char* argv[]) {
     int M, I, L, O, A;
     aig_fin >> M >> I >> L >> O >> A;
 
-    DdManager* mgr = Cudd_Init(0, 0, CUDD_UNIQUE_SLOTS, CUDD_CACHE_SLOTS, 0);
-    std::vector<DdNode*> bdd_vars(M+1,nullptr);
+    DdManager* mgr = Cudd_Init(0, 0, CUDD_UNIQUE_SLOTS * 2, CUDD_CACHE_SLOTS * 2, 0);
+    //Dynamic variable reordering
+    Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
+
     //aig input 
+    std::vector<DdNode*> bdd_vars(M+1,nullptr);
     for(int i = 0; i < I; ++i) {
         int input;
         aig_fin >> input;
@@ -116,9 +123,6 @@ int main(int argc, char* argv[]) {
     //O = 1
     int output_idx;
     aig_fin >> output_idx;
-
-    //Dynamic variable reordering
-    Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
 
     //aig AND gates
     for(int i = 0;i < A; ++i){
@@ -140,8 +144,8 @@ int main(int argc, char* argv[]) {
     Cudd_AutodynDisable(mgr);
 
     //Manually reduce the heap
-    Cudd_ReduceHeap(mgr, CUDD_REORDER_SIFT, 0);
-
+    //Cudd_ReduceHeap(mgr, CUDD_REORDER_GROUP_SIFT, 0);
+    
     //get bit widths from txt
     std::vector<int> bitwidths;
     std::ifstream bitwidth_fin(bitwidth_filename);
@@ -217,3 +221,4 @@ int main(int argc, char* argv[]) {
     output_fout.close();
     return 0;
 }
+
