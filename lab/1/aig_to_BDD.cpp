@@ -10,7 +10,7 @@
 #include <queue>
 #include "cuddObj.hh"
 #include "cuddInt.h"
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
