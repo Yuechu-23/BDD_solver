@@ -92,6 +92,8 @@ std::string generate_expression(const json& expr, const json& variable_list, std
         return variable_list[id]["name"];
     } else if (op == "CONST") {
         return expr["value"];
+    }else {
+        return "";
     }
 }
 
