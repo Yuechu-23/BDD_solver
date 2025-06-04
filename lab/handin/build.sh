@@ -82,7 +82,7 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "\033[32mSuccess! ${JSONTOBITWIDTH_EXEC}\033[0m"
 
-# 编译 aid_to_BDD
+# 编译 aig_to_BDD
 echo "==== Step 5: Compile aig_to_BDD.cpp ===="
 SRC_DIR="./"
 INCLUDE_DIR="./json/include"
