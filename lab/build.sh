@@ -1,5 +1,4 @@
 #!/bin/bash
-# filepath: /root/workspace/sv-sampler-lab/build.sh
 
 # 赋予执行权限： chmod +x build.sh
 # 运行脚本： ./build.sh
@@ -93,11 +92,10 @@ CPLUSPLUS_LIB="$CUDD_DIR/cplusplus/libs"
 CUDD_INCLUDE="$CUDD_DIR/cudd"
 
 EXEC_NAME="aig_to_BDD"
-CXX_FLAGS="-std=c++17 -O1"
+CXX_FLAGS="-std=c++17"
 INCLUDE_FLAGS="-I$INCLUDE_DIR -I./cudd -I./cudd/epd -I./cudd/st -I./cudd/mtr -I./cudd/cplusplus -I$SRC_DIR -I$CUDD_INCLUDE"
 LINK_FLAGS="-L$CUDD_LIB -L$CPLUSPLUS_LIB -lcudd -lutil -lm -lstdc++"
 
-# 检查 CUDD 库
 if [ ! -f "$CUDD_LIB/libcudd.a" ] && [ ! -f "$CUDD_LIB/libcudd.so" ]; then
     echo "Failed: Unable to find compiled CUDD"
     exit 1
