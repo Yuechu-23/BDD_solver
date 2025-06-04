@@ -7,15 +7,15 @@
 #include <algorithm>
 #include <random>
 #include <cassert>
+#include <queue>
 #include "cuddObj.hh"
 #include "cuddInt.h"
-#include "nlohmann/json.hpp"
+#include "json.hpp"
 
 using json = nlohmann::json;
 
 std::unordered_map<DdNode*, __float128> node_odd_cnt;
 std::unordered_map<DdNode*, __float128> node_even_cnt;
-
 
 static std::mt19937 gen;
 static std::uniform_real_distribution<double> dis(0.0, 1.0);
@@ -81,6 +81,22 @@ void DFS(DdNode* x,int odd,std::vector<int>& path){
     }
 }
 
+struct AND{
+    int lhs;
+    int rhs0;
+    int rhs1;
+    AND(int lhs, int rhs0, int rhs1) : lhs(lhs), rhs0(rhs0), rhs1(rhs1) {}
+};
+
+void topologicalSort(int node, const std::vector<std::vector<int>>& graph, std::vector<int>& visited, std::vector<int>& order) {
+    visited[node] = 1;
+    for(int to : graph[node]) 
+        if(!visited[to]) 
+            topologicalSort(to, graph, visited, order);
+    order.push_back(node);
+}
+
+
 int main(int argc, char* argv[]) {
 
     //input
@@ -107,30 +123,51 @@ int main(int argc, char* argv[]) {
     aig_fin >> M >> I >> L >> O >> A;
 
     DdManager* mgr = Cudd_Init(0, 0, CUDD_UNIQUE_SLOTS * 2, CUDD_CACHE_SLOTS * 2, 0);
-    //Dynamic variable reordering
-    Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
 
+    
     //aig input 
     std::vector<DdNode*> bdd_vars(M+1,nullptr);
     for(int i = 0; i < I; ++i) {
         int input;
         aig_fin >> input;
-        int idx = input / 2;
-        bdd_vars[idx] = Cudd_bddIthVar(mgr,idx);
-        Cudd_Ref(bdd_vars[idx]);
     }
     //L = 0
     //O = 1
     int output_idx;
     aig_fin >> output_idx;
 
-    //aig AND gates
-    for(int i = 0;i < A; ++i){
+    
+    std::vector<AND> and_gates;
+    std::vector<std::vector<int>> graph(M+1);
+    std::vector<int> visited(M+1,0);
+    std::vector<int> order;
+    for(int i = 0;i < A;i++){
         int lhs, rhs0, rhs1;
         aig_fin >> lhs >> rhs0 >> rhs1;
+        and_gates.emplace_back(lhs, rhs0, rhs1);
+        graph[lhs / 2].push_back(rhs0 / 2);
+        graph[lhs / 2].push_back(rhs1 / 2);
+    }
+    topologicalSort(output_idx/2, graph, visited, order);
+    std::vector<int> perm;
+    for(auto num: order) 
+        if(num <= I) 
+            perm.push_back(num);
+
+    for(auto i: perm){
+        bdd_vars[i] = Cudd_bddIthVar(mgr, i);
+        Cudd_Ref(bdd_vars[i]);
+    }
+    
+    Cudd_AutodynEnable(mgr, CUDD_REORDER_GROUP_SIFT);
+    //aig AND gates
+    for(const auto& gate : and_gates){
+        int lhs = gate.lhs;
+        int rhs0 = gate.rhs0;
+        int rhs1 = gate.rhs1;
         int id_lhs = lhs / 2;
-        bdd_vars[id_lhs] = Cudd_bddAnd(mgr, 
-            (rhs0 & 1) ? Cudd_Not(bdd_vars[rhs0/2]): bdd_vars[rhs0/2], 
+        bdd_vars[id_lhs] = Cudd_bddAnd(mgr,
+            (rhs0 & 1) ? Cudd_Not(bdd_vars[rhs0/2]): bdd_vars[rhs0/2],
             (rhs1 & 1) ? Cudd_Not(bdd_vars[rhs1/2]): bdd_vars[rhs1/2]);
         Cudd_Ref(bdd_vars[id_lhs]);
     }
@@ -140,11 +177,9 @@ int main(int argc, char* argv[]) {
     DdNode* output_bdd = bdd_vars[output_idx / 2];
     if (output_idx & 1) output_bdd = Cudd_Not(output_bdd);
     Cudd_Ref(output_bdd);
-    
-    Cudd_AutodynDisable(mgr);
 
-    //Manually reduce the heap
-    //Cudd_ReduceHeap(mgr, CUDD_REORDER_GROUP_SIFT, 0);
+    Cudd_AutodynDisable(mgr);
+    //Cudd_ReduceHeap(mgr, CUDD_REORDER_SIFT, 0);
     
     //get bit widths from txt
     std::vector<int> bitwidths;
